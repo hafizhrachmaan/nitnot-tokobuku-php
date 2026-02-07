@@ -1,9 +1,6 @@
 <?php
 // File: database.php
 
-<?php
-// File: database.php
-
 // Simple .env file loader
 if (file_exists(__DIR__ . '/.env')) {
     $lines = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -54,3 +51,4 @@ try {
 // while ($row = $stmt->fetch()) {
 //     echo $row['name'] . '<br>';
 // }
+
