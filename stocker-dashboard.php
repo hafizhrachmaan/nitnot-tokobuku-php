@@ -1,0 +1,193 @@
+<?php
+// File: stocker-dashboard.php
+session_start();
+
+// --- AUTHENTICATION GUARD ---
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'STOCKER') {
+    header('Location: /login');
+    exit();
+}
+// --- END AUTHENTICATION GUARD ---
+
+require __DIR__ . '/database.php';
+
+// Fetch all products from the database
+$stmt = $pdo->query("SELECT id, name, description, price, stock FROM products ORDER BY name ASC");
+$products = $stmt->fetchAll();
+$username = $_SESSION['username'];
+$successMessage = $_GET['success'] ?? null;
+
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Manajemen Barang - NITNOT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
+    <style>
+        .logo-font { font-family: 'Playfair Display', serif; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); min-height: 100vh; }
+        .glass-nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .premium-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 2.5rem; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.05); }
+        .input-field { background: rgba(248, 250, 252, 0.8); border: 1px solid #e2e8f0; transition: all 0.3s ease; }
+        .input-field:focus { background: white; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        @media (max-width: 1024px) {
+            .inventory-row { display: block; background: white; margin-bottom: 1rem; border-radius: 2rem; padding: 1.5rem; border: 1px solid rgba(0,0,0,0.05); }
+            .inventory-row td { display: block; width: 100%; border: none; padding: 0.25rem 0; }
+            .hide-on-mobile { display: none; }
+        }
+    </style>
+</head>
+<body class="body-font min-h-screen pb-10">
+
+<nav class="glass-nav text-white px-4 md:px-10 py-5 sticky top-0 z-50 shadow-2xl">
+    <div class="max-w-[1600px] mx-auto flex justify-between items-center">
+        <div class="flex items-center space-x-6">
+            <div class="flex flex-col border-r border-white/10 pr-6">
+                <h1 class="logo-font text-xl md:text-2xl font-black tracking-tighter leading-none">NITNOT</h1>
+                <p class="text-[8px] tracking-[0.3em] text-blue-400 font-bold uppercase mt-1">Inventaris</p>
+            </div>
+            <div class="hidden md:block">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode Pengelolaan</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="text-right hidden sm:block">
+                <p class="text-[8px] text-blue-400 uppercase font-black">Stokis</p>
+                <p class="text-xs font-bold leading-none"><?= htmlspecialchars($username) ?></p>
+            </div>
+            <form action="/logout.php" method="post" class="m-0">
+                <button type="submit" class="w-9 h-9 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg transition-all border border-white/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<main class="max-w-[1600px] mx-auto p-5 md:p-10 lg:grid lg:grid-cols-12 gap-10">
+    <div class="lg:col-span-4 mb-10 lg:mb-0">
+        <div class="premium-card sticky top-28 overflow-hidden">
+            <div class="bg-slate-900 p-6 text-center">
+                <h2 class="text-white text-xs font-black uppercase tracking-[0.3em]">Tambah Barang Baru</h2>
+            </div>
+            <form action="stocker_action.php?action=add" method="post" class="p-8 space-y-5">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-4">Nama Produk</label>
+                    <input type="text" name="name" placeholder="Contoh: Pulpen Pilot G2" required class="input-field w-full rounded-2xl p-4 text-sm font-semibold outline-none">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-4">Deskripsi</label>
+                    <textarea name="description" placeholder="Detail singkat barang..." rows="2" class="input-field w-full rounded-2xl p-4 text-sm font-semibold outline-none resize-none"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-4">Harga</label>
+                        <input type="number" step="0.01" name="price" placeholder="0" required class="input-field w-full rounded-2xl p-4 text-sm font-black outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase ml-4">Stok</label>
+                        <input type="number" name="stock" placeholder="0" required class="input-field w-full rounded-2xl p-4 text-sm font-black outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl uppercase text-xs tracking-widest shadow-xl shadow-blue-200 transition-all active:scale-95 mt-4 flex items-center justify-center">
+                    <i data-lucide="plus-circle" class="w-4 h-4 mr-2"></i> Simpan Data
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="lg:col-span-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+            <div>
+                <h3 class="font-black text-slate-900 uppercase tracking-tighter text-3xl md:text-4xl italic leading-none">Inventaris</h3>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center">
+                    <span class="w-6 h-[2px] bg-blue-500 mr-2"></span> Sistem Kontrol Stok
+                </p>
+            </div>
+            <div class="relative w-full md:w-80 group">
+                <i data-lucide="search" class="w-5 h-5 absolute left-5 top-4 text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                <input type="text" id="inventorySearch" onkeyup="filterInventory()" placeholder="Cari barang..." class="w-full pl-14 pr-6 py-4 bg-white/70 backdrop-blur-md border-none rounded-2xl text-sm font-bold shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 transition-all outline-none">
+            </div>
+        </div>
+
+        <?php if ($successMessage): ?>
+        <div class="mb-6 p-5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-2xl flex items-center">
+            <i data-lucide="check-circle-2" class="w-5 h-5 mr-3"></i>
+            <span class="text-xs font-black uppercase tracking-wider"><?= htmlspecialchars($successMessage) ?></span>
+        </div>
+        <?php endif; ?>
+
+        <div class="lg:bg-white lg:rounded-[3rem] lg:shadow-2xl lg:border lg:border-white lg:overflow-hidden lg:backdrop-blur-md lg:bg-opacity-80">
+            <table class="w-full text-left border-collapse">
+                <thead class="hide-on-mobile bg-slate-900 text-white">
+                    <tr>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Info Produk</th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Harga</th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Stok</th>
+                        <th class="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryBody" class="lg:divide-y lg:divide-slate-100">
+                    <?php foreach ($products as $product): ?>
+                    <tr class="inventory-row hover:bg-blue-50/50 transition-all group">
+                        <td class="px-0 lg:px-8 lg:py-6">
+                            <div class="flex flex-col">
+                                <span class="product-name font-black text-slate-800 text-lg lg:text-sm uppercase tracking-tight"><?= htmlspecialchars($product['name']) ?></span>
+                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">ID-<?= htmlspecialchars($product['id']) ?></span>
+                            </div>
+                        </td>
+                        <td class="px-0 lg:px-8 lg:py-6">
+                            <span class="lg:hidden text-[9px] font-black text-slate-400 uppercase block mb-1">Harga Satuan</span>
+                            <span class="font-black text-blue-600 text-lg lg:text-sm">Rp <?= number_format($product['price'], 0, ',', '.') ?></span>
+                        </td>
+                        <td class="px-0 lg:px-8 lg:py-6">
+                            <span class="lg:hidden text-[9px] font-black text-slate-400 uppercase block mb-1">Status Stok</span>
+                            <div class="flex items-center">
+                                <span class="<?= $product['stock'] <= 5 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600' ?> px-4 py-1.5 rounded-xl font-black text-[10px] uppercase">
+                                    <?= htmlspecialchars($product['stock']) ?> unit
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-0 lg:px-8 lg:py-6 text-center pt-5 lg:pt-6">
+                            <div class="flex lg:justify-center space-x-3">
+                                <a href="edit-product.php?id=<?= $product['id'] ?>" class="flex-1 lg:flex-none h-12 lg:w-auto lg:px-4 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-900 hover:text-white transition-all shadow-sm">
+                                    <i data-lucide="edit-3" class="w-4 h-4 mr-2"></i> 
+                                    <span class="font-black text-[10px] uppercase">Edit Barang</span>
+                                </a>
+                                <a href="stocker_action.php?action=delete&id=<?= $product['id'] ?>" onclick="return confirm('Hapus produk ini dari database?')" class="flex-1 lg:flex-none h-12 lg:w-auto lg:px-4 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm">
+                                    <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>
+                                    <span class="font-black text-[10px] uppercase">Hapus</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        
+        <?php if (empty($products)): ?>
+        <div class="py-24 text-center opacity-20 flex flex-col items-center">
+            <i data-lucide="box-select" class="w-20 h-20 mb-4"></i>
+            <p class="text-xl font-black uppercase tracking-[0.4em]">Tidak Ada Data Inventaris</p>
+        </div>
+        <?php endif; ?>
+    </div>
+</main>
+
+<script>
+    lucide.createIcons();
+    function filterInventory() {
+        const term = document.getElementById("inventorySearch").value.toLowerCase();
+        document.querySelectorAll(".inventory-row").forEach(row => {
+            const name = row.querySelector(".product-name").innerText.toLowerCase();
+            row.style.display = name.includes(term) ? "" : "none";
+        });
+    }
+</script>
+</body>
+</html>
