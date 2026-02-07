@@ -124,6 +124,6 @@ $products = $stmt->fetchAll();
     </div>
 </main>
 
-<script src="/public/js/kasir-pos.js" defer></script>
+<script src="/aset/js/kasir-pos.js" defer></script>
 </body>
 </html>
